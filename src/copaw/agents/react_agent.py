@@ -8,11 +8,9 @@ import logging
 import os
 from typing import Any, List, Optional, Type
 
-import asyncio
-
 from agentscope.agent import ReActAgent
 from agentscope.message import Msg, TextBlock, ToolResultBlock
-from agentscope.tool import Toolkit, ToolResponse
+from agentscope.tool import Toolkit
 from pydantic import BaseModel
 
 from ..app.audit import AuditLogger
@@ -320,7 +318,11 @@ class CoPawAgent(ReActAgent):
                         summary=f"{name}: {target[:100]}" if target else name,
                         actor="agent",
                         result=reason,
-                        detail={"input": {k: str(v)[:200] for k, v in inputs.items()}},
+                        detail={
+                            "input": {
+                                k: str(v)[:200] for k, v in inputs.items()
+                            },
+                        },
                     )
 
                 # Build a denied tool result and record it, just like

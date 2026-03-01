@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Unit tests for the AuditLogger."""
+# pylint: disable=redefined-outer-name
 
 import json
 from pathlib import Path
@@ -156,9 +157,9 @@ class TestMalformed:
     def test_skips_bad_lines(self, audit: AuditLogger, audit_path: Path):
         # Write a valid entry then a bad line
         audit.log(action="tool_call", target="good")
-        with open(audit_path, "a") as f:
+        with open(audit_path, "a", encoding="utf-8") as f:
             f.write("this is not json\n")
-            f.write("{\"bad\": true}\n")
+            f.write('{"bad": true}\n')
 
         entries = audit.query()
         assert len(entries) == 1

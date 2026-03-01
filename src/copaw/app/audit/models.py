@@ -35,7 +35,7 @@ class AuditEntry(BaseModel):
     )
     target: str = Field(
         default="",
-        description="Primary object of the action (tool name, file path, etc.)",
+        description="Primary object of the action (tool name, etc.)",
     )
     summary: str = Field(
         default="",
