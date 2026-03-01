@@ -34,6 +34,7 @@ class ApprovalService:
     ) -> None:
         self._mode = mode
         self._timeout = timeout
+        self._audit_logger = None  # Set externally after construction
 
         # request-id -> (request, asyncio.Event)
         self._pending: Dict[str, tuple[ApprovalRequest, asyncio.Event]] = {}
@@ -134,6 +135,22 @@ class ApprovalService:
             request_id,
             req.action,
         )
+
+        # Audit: record the approval decision.
+        if self._audit_logger is not None:
+            self._audit_logger.log(
+                action="approval_decision",
+                target=req.action,
+                summary=f"{reply.value}: {req.summary or req.target}",
+                actor="user",
+                result=reply.value,
+                detail={
+                    "request_id": request_id,
+                    "original_action": req.action,
+                    "original_target": req.target,
+                },
+            )
+
         return True
 
     def list_pending(self) -> List[ApprovalRequest]:

@@ -5,6 +5,7 @@ export { request } from "./request";
 export { getApiUrl, getApiToken } from "./config";
 
 import { approvalApi } from "./modules/approval";
+import { auditApi } from "./modules/audit";
 import { rootApi } from "./modules/root";
 import { channelApi } from "./modules/channel";
 import { cronJobApi } from "./modules/cronjob";
@@ -21,6 +22,9 @@ import { mcpApi } from "./modules/mcp";
 export const api = {
   // Approvals
   ...approvalApi,
+
+  // Audit
+  ...auditApi,
 
   // Root
   ...rootApi,

@@ -15,6 +15,7 @@ from agentscope.message import Msg, TextBlock, ToolResultBlock
 from agentscope.tool import Toolkit, ToolResponse
 from pydantic import BaseModel
 
+from ..app.audit import AuditLogger
 from .command_handler import CommandHandler
 from .hooks import BootstrapHook, MemoryCompactionHook
 from .memory import CoPawInMemoryMemory
@@ -66,6 +67,7 @@ class CoPawAgent(ReActAgent):
         mcp_clients: Optional[List[Any]] = None,
         memory_manager: MemoryManager | None = None,
         approval_service: Optional[Any] = None,
+        audit_logger: Optional[AuditLogger] = None,
         max_iters: int = 50,
         max_input_length: int = 128 * 1024,  # 128K = 131072 tokens
     ):
@@ -80,6 +82,7 @@ class CoPawAgent(ReActAgent):
             memory_manager: Optional memory manager instance
             approval_service: Optional ApprovalService for gating
                 high-risk tool calls
+            audit_logger: Optional AuditLogger for recording operations
             max_iters: Maximum number of reasoning-acting iterations
                 (default: 50)
             max_input_length: Maximum input length in tokens for model
@@ -89,6 +92,7 @@ class CoPawAgent(ReActAgent):
         self._max_input_length = max_input_length
         self._mcp_clients = mcp_clients or []
         self._approval_service = approval_service
+        self._audit_logger = audit_logger
 
         # Memory compaction threshold: configurable ratio of max_input_length
         self._memory_compact_threshold = int(
@@ -271,27 +275,29 @@ class CoPawAgent(ReActAgent):
             await self.toolkit.register_mcp_client(client)
 
     async def _acting(self, tool_call) -> dict | None:
-        """Override to inject approval gate before high-risk tool calls.
+        """Override to inject approval gate and audit logging.
 
         If an ApprovalService is configured and the tool is high-risk,
         we ask for human approval before delegating to the parent
         ``_acting`` which calls ``self.toolkit.call_tool_function``.
+
+        All tool calls are recorded via the audit logger.
         """
         from ..app.approvals.models import ApprovalStatus
 
         name = tool_call.get("name", "")
+        inputs = tool_call.get("input", {}) or {}
+        target = (
+            inputs.get("command", "")
+            or inputs.get("file_path", "")
+            or inputs.get("url", "")
+            or str(inputs)[:200]
+        )
 
         if (
             self._approval_service is not None
             and self._approval_service.needs_approval(name)
         ):
-            inputs = tool_call.get("input", {}) or {}
-            target = (
-                inputs.get("command", "")
-                or inputs.get("file_path", "")
-                or inputs.get("url", "")
-                or str(inputs)[:200]
-            )
             summary = f"Agent wants to call {name}"
             if target:
                 summary += f": {target[:100]}"
@@ -305,6 +311,17 @@ class CoPawAgent(ReActAgent):
             if req.status != ApprovalStatus.APPROVED:
                 reason = req.status.value
                 logger.info("Tool call %s (%s): %s", reason, req.id, name)
+
+                # Audit: denied tool call
+                if self._audit_logger is not None:
+                    self._audit_logger.log(
+                        action="tool_call",
+                        target=name,
+                        summary=f"{name}: {target[:100]}" if target else name,
+                        actor="agent",
+                        result=reason,
+                        detail={"input": {k: str(v)[:200] for k, v in inputs.items()}},
+                    )
 
                 # Build a denied tool result and record it, just like
                 # the parent _acting would do.
@@ -332,6 +349,17 @@ class CoPawAgent(ReActAgent):
                 await self.print(tool_res_msg, True)
                 await self.memory.add(tool_res_msg)
                 return None
+
+        # Audit: tool call executed
+        if self._audit_logger is not None:
+            self._audit_logger.log(
+                action="tool_call",
+                target=name,
+                summary=f"{name}: {target[:100]}" if target else name,
+                actor="agent",
+                result="success",
+                detail={"input": {k: str(v)[:200] for k, v in inputs.items()}},
+            )
 
         # Approved or not high-risk — delegate to parent
         return await super()._acting(tool_call)

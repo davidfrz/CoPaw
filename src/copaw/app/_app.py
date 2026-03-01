@@ -16,12 +16,13 @@ from ..config import (  # pylint: disable=no-name-in-module
     ConfigWatcher,
 )
 from ..config.utils import get_jobs_path, get_chats_path, get_config_path
-from ..constant import DOCS_ENABLED, LOG_LEVEL_ENV
+from ..constant import AUDIT_FILE, DOCS_ENABLED, LOG_LEVEL_ENV, WORKING_DIR
 from ..__version__ import __version__
 from ..utils.logging import setup_logger
 from .channels import ChannelManager  # pylint: disable=no-name-in-module
 from .channels.utils import make_process_from_runner
 from .approvals import ApprovalMode, ApprovalService
+from .audit import AuditLogger
 from .mcp import MCPClientManager, MCPConfigWatcher  # MCP hot-reload support
 from .runner.repo.json_repo import JsonChatRepository
 from .crons.repo.json_repo import JsonJobRepository
@@ -60,8 +61,14 @@ async def lifespan(app: FastAPI):  # pylint: disable=too-many-statements
     runner.set_approval_service(approval_service)
     logger.info("Approval service started (mode=%s)", approval_mode.value)
 
+    # --- audit logger init ---
+    audit_logger = AuditLogger(path=WORKING_DIR / AUDIT_FILE)
+    runner.set_audit_logger(audit_logger)
+    approval_service._audit_logger = audit_logger
+
     # --- MCP client manager init (independent module, hot-reloadable) ---
     mcp_manager = MCPClientManager()
+    mcp_manager._audit_logger = audit_logger
     if hasattr(config, "mcp"):
         try:
             await mcp_manager.init_from_config(config.mcp)
@@ -86,6 +93,7 @@ async def lifespan(app: FastAPI):  # pylint: disable=too-many-statements
         channel_manager=channel_manager,
         timezone="UTC",
     )
+    cron_manager._audit_logger = audit_logger
     await cron_manager.start()
 
     # --- chat manager init and connect to runner.session ---
@@ -98,6 +106,7 @@ async def lifespan(app: FastAPI):  # pylint: disable=too-many-statements
 
     # --- config file watcher (auto-reload channels on config.json change) ---
     config_watcher = ConfigWatcher(channel_manager=channel_manager)
+    config_watcher._audit_logger = audit_logger
     await config_watcher.start()
 
     # --- MCP config watcher (auto-reload MCP clients on change) ---
@@ -121,6 +130,7 @@ async def lifespan(app: FastAPI):  # pylint: disable=too-many-statements
     app.state.chat_manager = chat_manager
     app.state.config_watcher = config_watcher
     app.state.approval_service = approval_service
+    app.state.audit_logger = audit_logger
     app.state.mcp_manager = mcp_manager
     app.state.mcp_watcher = mcp_watcher
 

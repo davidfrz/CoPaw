@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from typing import Any
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from ...agents.skills_manager import (
     SkillService,
@@ -153,36 +153,68 @@ async def batch_enable_skills(skill_name: list[str]) -> None:
 
 
 @router.post("")
-async def create_skill(request: CreateSkillRequest):
+async def create_skill(request: CreateSkillRequest, req: Request):
     result = SkillService.create_skill(
         name=request.name,
         content=request.content,
         references=request.references,
         scripts=request.scripts,
     )
+    audit = getattr(req.app.state, "audit_logger", None)
+    if audit and result:
+        audit.log(
+            action="skill_change",
+            target=request.name,
+            summary=f"Created skill: {request.name}",
+            actor="user",
+        )
     return {"created": result}
 
 
 @router.post("/{skill_name}/disable")
-async def disable_skill(skill_name: str):
+async def disable_skill(skill_name: str, request: Request):
     result = SkillService.disable_skill(skill_name)
+    audit = getattr(request.app.state, "audit_logger", None)
+    if audit and result:
+        audit.log(
+            action="skill_change",
+            target=skill_name,
+            summary=f"Disabled skill: {skill_name}",
+            actor="user",
+        )
     return {"disabled": result}
 
 
 @router.post("/{skill_name}/enable")
-async def enable_skill(skill_name: str):
+async def enable_skill(skill_name: str, request: Request):
     result = SkillService.enable_skill(skill_name)
+    audit = getattr(request.app.state, "audit_logger", None)
+    if audit and result:
+        audit.log(
+            action="skill_change",
+            target=skill_name,
+            summary=f"Enabled skill: {skill_name}",
+            actor="user",
+        )
     return {"enabled": result}
 
 
 @router.delete("/{skill_name}")
-async def delete_skill(skill_name: str):
+async def delete_skill(skill_name: str, request: Request):
     """Delete a skill from customized_skills directory permanently.
 
     This only deletes skills from customized_skills directory.
     Built-in skills cannot be deleted.
     """
     result = SkillService.delete_skill(skill_name)
+    audit = getattr(request.app.state, "audit_logger", None)
+    if audit and result:
+        audit.log(
+            action="skill_change",
+            target=skill_name,
+            summary=f"Deleted skill: {skill_name}",
+            actor="user",
+        )
     return {"deleted": result}
 
 

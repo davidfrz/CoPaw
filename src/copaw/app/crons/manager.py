@@ -51,6 +51,7 @@ class CronManager:
         self._states: Dict[str, CronJobState] = {}
         self._rt: Dict[str, _Runtime] = {}
         self._started = False
+        self._audit_logger = None  # Set externally after construction
 
     async def start(self) -> None:
         async with self._lock:
@@ -99,6 +100,14 @@ class CronManager:
             await self._repo.upsert_job(spec)
             if self._started:
                 await self._register_or_update(spec)
+        if self._audit_logger is not None:
+            self._audit_logger.log(
+                action="cron_change",
+                target=spec.id,
+                summary=f"Created/updated cron job: {spec.name}",
+                actor="user",
+                detail={"job_name": spec.name, "cron": spec.schedule.cron},
+            )
 
     async def delete_job(self, job_id: str) -> bool:
         async with self._lock:
@@ -106,7 +115,15 @@ class CronManager:
                 self._scheduler.remove_job(job_id)
             self._states.pop(job_id, None)
             self._rt.pop(job_id, None)
-            return await self._repo.delete_job(job_id)
+            deleted = await self._repo.delete_job(job_id)
+        if self._audit_logger is not None and deleted:
+            self._audit_logger.log(
+                action="cron_change",
+                target=job_id,
+                summary=f"Deleted cron job: {job_id}",
+                actor="user",
+            )
+        return deleted
 
     async def pause_job(self, job_id: str) -> None:
         async with self._lock:

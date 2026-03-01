@@ -27,6 +27,7 @@
     "channels": "频道",
     "sessions": "会话",
     "cronJobs": "定时任务",
+    "auditLogs": "审计日志",
     "agent": "智能体",
     "workspace": "工作区",
     "skills": "技能",
@@ -356,5 +357,24 @@
     "title": "需要审批",
     "approve": "通过",
     "deny": "拒绝"
+  },
+  "audit": {
+    "title": "审计日志",
+    "description": "查看所有已记录的操作和事件。",
+    "time": "时间",
+    "actor": "操作者",
+    "action": "操作类型",
+    "target": "目标",
+    "summary": "摘要",
+    "result": "结果",
+    "filterAction": "按类型筛选",
+    "actions": {
+      "tool_call": "工具调用",
+      "approval_decision": "审批决策",
+      "config_change": "配置变更",
+      "skill_change": "技能变更",
+      "mcp_change": "MCP变更",
+      "cron_change": "定时任务变更"
+    }
   }
 }

@@ -18,6 +18,7 @@ import {
   Globe,
   Settings,
   Plug,
+  FileText,
 } from "lucide-react";
 
 const { Sider } = Layout;
@@ -27,6 +28,7 @@ const keyToPath: Record<string, string> = {
   channels: "/channels",
   sessions: "/sessions",
   "cron-jobs": "/cron-jobs",
+  "audit-logs": "/audit-logs",
   skills: "/skills",
   mcp: "/mcp",
   workspace: "/workspace",
@@ -89,6 +91,11 @@ export default function Sidebar({ selectedKey }: SidebarProps) {
           key: "cron-jobs",
           label: t("nav.cronJobs"),
           icon: <CalendarClock size={16} />,
+        },
+        {
+          key: "audit-logs",
+          label: t("nav.auditLogs"),
+          icon: <FileText size={16} />,
         },
       ],
     },

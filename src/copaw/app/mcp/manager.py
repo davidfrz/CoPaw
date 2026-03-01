@@ -34,6 +34,7 @@ class MCPClientManager:
         """Initialize an empty MCP client manager."""
         self._clients: Dict[str, StdIOStatefulClient] = {}
         self._lock = asyncio.Lock()
+        self._audit_logger = None  # Set externally after construction
 
     async def init_from_config(self, config: "MCPConfig") -> None:
         """Initialize clients from configuration.
@@ -133,6 +134,15 @@ class MCPClientManager:
             else:
                 logger.debug(f"Added new MCP client: {key}")
 
+        if self._audit_logger is not None:
+            self._audit_logger.log(
+                action="mcp_change",
+                target=key,
+                summary=f"Replaced MCP client: {key}",
+                actor="system",
+                detail={"name": client_config.name},
+            )
+
     async def remove_client(self, key: str) -> None:
         """Remove and close a client.
 
@@ -148,6 +158,14 @@ class MCPClientManager:
                 await old_client.close()
             except Exception as e:
                 logger.warning(f"Error closing MCP client '{key}': {e}")
+
+            if self._audit_logger is not None:
+                self._audit_logger.log(
+                    action="mcp_change",
+                    target=key,
+                    summary=f"Removed MCP client: {key}",
+                    actor="system",
+                )
 
     async def close_all(self) -> None:
         """Close all MCP clients.

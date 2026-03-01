@@ -3,6 +3,7 @@ from fastapi import APIRouter
 
 from .agent import router as agent_router
 from ..approvals.routes import router as approvals_router
+from ..audit.routes import router as audit_router
 from .config import router as config_router
 from .local_models import router as local_models_router
 from .providers import router as providers_router
@@ -20,6 +21,7 @@ router = APIRouter()
 
 router.include_router(agent_router)
 router.include_router(approvals_router)
+router.include_router(audit_router)
 router.include_router(config_router)
 router.include_router(console_router)
 router.include_router(cron_router)

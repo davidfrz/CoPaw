@@ -32,6 +32,7 @@ class ConfigWatcher:
         self._poll_interval = poll_interval
         self._config_path = config_path or get_config_path()
         self._task: Optional[asyncio.Task] = None
+        self._audit_logger = None  # Set externally after construction
 
         # Snapshot of the last known channel config (for diffing)
         self._last_channels: Optional[ChannelConfig] = None
@@ -155,6 +156,15 @@ class ConfigWatcher:
             logger.info(
                 f"ConfigWatcher: channel '{name}' config changed, reloading",
             )
+            # Audit: record config change.
+            if self._audit_logger is not None:
+                self._audit_logger.log(
+                    action="config_change",
+                    target=f"channel.{name}",
+                    summary=f"Channel '{name}' config changed",
+                    actor="system",
+                    result="success",
+                )
             try:
                 old_channel = await self._channel_manager.get_channel(name)
                 if old_channel is None:

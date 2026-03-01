@@ -29,6 +29,7 @@ class AgentRunner(Runner):
         self._chat_manager = None  # Store chat_manager reference
         self._mcp_manager = None  # MCP client manager for hot-reload
         self._approval_service = None  # Approval gate for high-risk tools
+        self._audit_logger = None  # Audit logger for recording operations
 
         self.memory_manager: MemoryManager | None = None
 
@@ -55,6 +56,14 @@ class AgentRunner(Runner):
             approval_service: ApprovalService instance
         """
         self._approval_service = approval_service
+
+    def set_audit_logger(self, audit_logger):
+        """Set audit logger for recording operations.
+
+        Args:
+            audit_logger: AuditLogger instance
+        """
+        self._audit_logger = audit_logger
 
     async def query_handler(
         self,
@@ -110,6 +119,7 @@ class AgentRunner(Runner):
                 mcp_clients=mcp_clients,
                 memory_manager=self.memory_manager,
                 approval_service=self._approval_service,
+                audit_logger=self._audit_logger,
                 max_iters=max_iters,
                 max_input_length=max_input_length,
             )

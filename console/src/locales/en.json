@@ -27,6 +27,7 @@
     "channels": "Channels",
     "sessions": "Sessions",
     "cronJobs": "Cron Jobs",
+    "auditLogs": "Audit Logs",
     "agent": "Agent",
     "workspace": "Workspace",
     "skills": "Skills",
@@ -356,5 +357,24 @@
     "title": "Approval Required",
     "approve": "Approve",
     "deny": "Deny"
+  },
+  "audit": {
+    "title": "Audit Logs",
+    "description": "View all recorded operations and events.",
+    "time": "Time",
+    "actor": "Actor",
+    "action": "Action",
+    "target": "Target",
+    "summary": "Summary",
+    "result": "Result",
+    "filterAction": "Filter by action",
+    "actions": {
+      "tool_call": "Tool Call",
+      "approval_decision": "Approval Decision",
+      "config_change": "Config Change",
+      "skill_change": "Skill Change",
+      "mcp_change": "MCP Change",
+      "cron_change": "Cron Change"
+    }
   }
 }
